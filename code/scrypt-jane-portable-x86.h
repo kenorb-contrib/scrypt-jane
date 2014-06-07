@@ -109,22 +109,22 @@
 #if defined(X86_INTRINSIC_SSE2)
 	typedef union packedelem8_t {
 		uint8_t u[16];
-		xmmi v;	
+		xmmi v;
 	} packedelem8;
 
 	typedef union packedelem32_t {
 		uint32_t u[4];
-		xmmi v;	
+		xmmi v;
 	} packedelem32;
 
 	typedef union packedelem64_t {
 		uint64_t u[2];
-		xmmi v;	
+		xmmi v;
 	} packedelem64;
 #else
 	typedef union packedelem8_t {
 		uint8_t u[16];
-		uint32_t dw[4];		
+		uint32_t dw[4];
 	} packedelem8;
 
 	typedef union packedelem32_t {
@@ -231,7 +231,7 @@
 		#endif
 	#else
 		#define asm_calling_convention STDCALL
-		#define aret(n) a1(ret n)		
+		#define aret(n) a1(ret n)
 		#define asm_naked_fn(fn) ; __asm__ (".intel_syntax noprefix;\n.text\n" asm_align16 GNU_ASFN(fn)
 	#endif
 
@@ -458,5 +458,12 @@ get_top_cpuflag_desc(size_t flag) {
 		#undef X86_INTRINSIC_SSE2
 	#endif
 #endif
+
+#else
+
+static size_t
+detect_cpu(void) {
+	return 0;
+}
 
 #endif /* defined(CPU_X86) || defined(CPU_X86_64) */
