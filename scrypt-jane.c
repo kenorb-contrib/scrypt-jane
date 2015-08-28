@@ -117,6 +117,7 @@ scrypt_alloc(uint64_t size) {
 		scrypt_fatal_error("scrypt: not enough address space on this CPU to allocate required memory");
 	aa.mem = (uint8_t *)malloc((size_t)size);
 	aa.ptr = (uint8_t *)(((size_t)aa.mem + (SCRYPT_BLOCK_BYTES - 1)) & ~(SCRYPT_BLOCK_BYTES - 1));
+    //fprintf(stderr, "scrypt_alloc(%zu)\n", size);
 	if (!aa.mem)
 		scrypt_fatal_error("scrypt: out of memory");
 	return aa;
@@ -131,9 +132,10 @@ scrypt_free(scrypt_aligned_alloc *aa) {
 
 void
 scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t salt_len, uint8_t Nfactor, uint8_t rfactor, uint8_t pfactor, uint8_t *out, size_t bytes) {
-	scrypt_aligned_alloc YX, V;
+	static scrypt_aligned_alloc YX, V;
 	uint8_t *X, *Y;
 	uint32_t N, r, p, chunk_bytes, i;
+    static int last_Nfactor = -1, last_rfactor = -1, last_pfactor = -1;
 
 #if !defined(SCRYPT_CHOOSE_COMPILETIME)
 	scrypt_ROMixfn scrypt_ROMix = scrypt_getROMix();
@@ -159,9 +161,21 @@ scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t
 	r = (1 << rfactor);
 	p = (1 << pfactor);
 
+    //fprintf(stderr, "scrypt(%u,%u,%u) %p %p %p %p\n", N, r, p, &V, V.mem, &YX, YX.mem);
 	chunk_bytes = SCRYPT_BLOCK_BYTES * r * 2;
-	V = scrypt_alloc((uint64_t)N * chunk_bytes);
-	YX = scrypt_alloc((p + 1) * chunk_bytes);
+    if (Nfactor != last_Nfactor || rfactor != last_rfactor || pfactor != last_pfactor) {
+        //fprintf(stderr, "need to reallocate\n");
+        if (last_Nfactor >= 0 || last_rfactor >= 0 || last_pfactor >= 0) {
+            //fprintf(stderr, "freeing old V and YX\n");
+	        scrypt_free(&V);
+	        scrypt_free(&YX);
+        }
+	    V = scrypt_alloc((uint64_t)N * chunk_bytes);
+	    YX = scrypt_alloc((p + 1) * chunk_bytes);
+        last_Nfactor = Nfactor;
+        last_rfactor = rfactor;
+        last_pfactor = pfactor;
+    }
 
 	/* 1: X = PBKDF2(password, salt) */
 	Y = YX.ptr;
@@ -175,8 +189,5 @@ scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t
 	/* 3: Out = PBKDF2(password, X) */
 	scrypt_pbkdf2(password, password_len, X, chunk_bytes * p, 1, out, bytes);
 
-	scrypt_ensure_zero(YX.ptr, (p + 1) * chunk_bytes);
-
-	scrypt_free(&V);
-	scrypt_free(&YX);
+	//scrypt_ensure_zero(YX.ptr, (p + 1) * chunk_bytes);
 }
