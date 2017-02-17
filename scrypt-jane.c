@@ -129,8 +129,18 @@ scrypt_free(scrypt_aligned_alloc *aa) {
 #endif
 
 
-void
-scrypt_prealloc(uint8_t Nfactor, uint8_t rfactor, uint8_t pfactor, scrypt_aligned_alloc *YX, scrypt_aligned_alloc *V) {
+
+typedef struct  {
+	uint32_t N, r, p;
+	scrypt_aligned_alloc YX, V;
+#if !defined(SCRYPT_CHOOSE_COMPILETIME)
+	scrypt_ROMixfn scrypt_ROMix;
+#endif
+} scrypt_prealloc_t;
+
+
+scrypt_prealloc_t*
+scrypt_prealloc(uint8_t Nfactor, uint8_t rfactor, uint8_t pfactor) {
 	uint32_t N, r, p, chunk_bytes;
 
 	if (Nfactor > scrypt_maxNfactor)
@@ -144,17 +154,79 @@ scrypt_prealloc(uint8_t Nfactor, uint8_t rfactor, uint8_t pfactor, scrypt_aligne
 	r = (1 << rfactor);
 	p = (1 << pfactor);
 
+	scrypt_prealloc_t *rtn = calloc(1, sizeof(scrypt_prealloc_t));
+	rtn->N = N;
+	rtn->r = r;
+	rtn->p = p;
+
 	chunk_bytes = SCRYPT_BLOCK_BYTES * r * 2;
-	*V  = scrypt_alloc((uint64_t)N * chunk_bytes);
-	*YX = scrypt_alloc((p + 1) * chunk_bytes);
+	rtn->YX = scrypt_alloc((p + 1) * chunk_bytes);
+	rtn->V  = scrypt_alloc((uint64_t)N * chunk_bytes);
+
+#if !defined(SCRYPT_CHOOSE_COMPILETIME)
+	rtn->scrypt_ROMix = scrypt_getROMix();
+#endif
+
+	return rtn;
 }
 
 
 void
-scrypt_dealloc(scrypt_aligned_alloc *YX, scrypt_aligned_alloc *V) {
-	scrypt_free(YX);
-	scrypt_free(V);
+scrypt_dealloc(scrypt_prealloc_t *pre) {
+	scrypt_free(&pre->YX);
+	scrypt_free(&pre->V);
+	memset(pre, 0, sizeof(*pre));
+	free(pre);
 }
+
+
+void
+scrypt_using_prealloc(
+	scrypt_prealloc_t *pre,
+	const uint8_t *password, size_t password_len,
+	const uint8_t *salt, size_t salt_len,
+	uint8_t *out, size_t bytes
+) {
+	uint8_t *X, *Y;
+	scrypt_aligned_alloc YX, V;
+	uint32_t N, r, p, chunk_bytes, i;
+
+#if !defined(SCRYPT_CHOOSE_COMPILETIME)
+	scrypt_ROMixfn scrypt_ROMix = pre->scrypt_ROMix;
+#endif
+
+	N = pre->N;
+	r = pre->r;
+	p = pre->p;
+
+	YX = pre->YX;
+	V  = pre->V;
+
+
+#if !defined(SCRYPT_TEST)
+	static int power_on_self_test = 0;
+	if (!power_on_self_test) {
+		power_on_self_test = 1;
+		if (!scrypt_power_on_self_test())
+			scrypt_fatal_error("scrypt: power on self test failed");
+	}
+#endif
+
+	chunk_bytes = SCRYPT_BLOCK_BYTES * r * 2;
+
+	/* 1: X = PBKDF2(password, salt) */
+	Y = YX.ptr;
+	X = Y + chunk_bytes;
+	scrypt_pbkdf2(password, password_len, salt, salt_len, 1, X, chunk_bytes * p);
+
+	/* 2: X = ROMix(X) */
+	for (i = 0; i < p; i++)
+		scrypt_ROMix((scrypt_mix_word_t *)(X + (chunk_bytes * i)), (scrypt_mix_word_t *)Y, (scrypt_mix_word_t *)V.ptr, N, r);
+
+	/* 3: Out = PBKDF2(password, X) */
+	scrypt_pbkdf2(password, password_len, X, chunk_bytes * p, 1, out, bytes);
+}
+
 
 
 void
@@ -210,45 +282,3 @@ scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t
 }
 
 
-void
-scrypt_using_prealloc(
-	const uint8_t *password, size_t password_len,
-	const uint8_t *salt, size_t salt_len,
-	uint8_t Nfactor, uint8_t rfactor, uint8_t pfactor,
-	uint8_t *out, size_t bytes,
-	scrypt_aligned_alloc YX, scrypt_aligned_alloc V
-) {
-	uint8_t *X, *Y;
-	uint32_t N, r, p, chunk_bytes, i;
-
-#if !defined(SCRYPT_CHOOSE_COMPILETIME)
-	scrypt_ROMixfn scrypt_ROMix = scrypt_getROMix();
-#endif
-
-#if !defined(SCRYPT_TEST)
-	static int power_on_self_test = 0;
-	if (!power_on_self_test) {
-		power_on_self_test = 1;
-		if (!scrypt_power_on_self_test())
-			scrypt_fatal_error("scrypt: power on self test failed");
-	}
-#endif
-
-	N = (1 << (Nfactor + 1));
-	r = (1 << rfactor);
-	p = (1 << pfactor);
-
-	chunk_bytes = SCRYPT_BLOCK_BYTES * r * 2;
-
-	/* 1: X = PBKDF2(password, salt) */
-	Y = YX.ptr;
-	X = Y + chunk_bytes;
-	scrypt_pbkdf2(password, password_len, salt, salt_len, 1, X, chunk_bytes * p);
-
-	/* 2: X = ROMix(X) */
-	for (i = 0; i < p; i++)
-		scrypt_ROMix((scrypt_mix_word_t *)(X + (chunk_bytes * i)), (scrypt_mix_word_t *)Y, (scrypt_mix_word_t *)V.ptr, N, r);
-
-	/* 3: Out = PBKDF2(password, X) */
-	scrypt_pbkdf2(password, password_len, X, chunk_bytes * p, 1, out, bytes);
-}
