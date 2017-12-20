@@ -6,6 +6,10 @@
 
 #include <string.h>
 
+static size_t detect_cpu(void) {
+        return 0;
+}
+
 #include "scrypt-jane.h"
 #include "code/scrypt-jane-portable.h"
 #include "code/scrypt-jane-hash.h"
@@ -179,4 +183,19 @@ scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t
 
 	scrypt_free(&V);
 	scrypt_free(&YX);
+}
+
+char* scrypt_hex(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t salt_len, uint8_t Nfactor, uint8_t rfactor, uint8_t pfactor, size_t bytes) {
+	unsigned char * raw_output = malloc(bytes);
+	char * hex_output = malloc(bytes*2+1);
+	const char hex_digits[] = "0123456789abcdef";
+	scrypt(password, password_len, salt, salt_len, Nfactor, rfactor, pfactor, raw_output, bytes);
+	for (size_t i=0; i<bytes; i++) {
+		hex_output[2*i]   = hex_digits[raw_output[i]/16];
+		hex_output[2*i+1] = hex_digits[raw_output[i]%16];
+		raw_output[i] = '\0';
+	}
+	free(raw_output);
+	hex_output[bytes*2] = '\0';
+	return hex_output;
 }

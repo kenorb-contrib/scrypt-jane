@@ -161,3 +161,15 @@ I chose to use the log2 of each parameter as it is the common way to communicate
 # License
 
 Public Domain, or MIT
+
+# Modifications
+
+Some simple modifications to work in emcc (WebAssembly).  
+Compile using something like
+
+    emcc scrypt-jane.c -O3 -DSCRYPT_SALSA -DSCRYPT_SHA256 -s EXPORTED_FUNCTIONS='["_scrypt_hex"]' -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' -s ASSERTIONS=1 -s TOTAL_MEMORY=totalram -o example.js
+
+Call using something like
+
+    Module.ccall('scrypt_hex', 'string', ['string', 'number', 'string', 'number', 'number', 'number', 'number', 'number'], ['asdfasdf', 8, 'qwerqwer', 8, 13, 3, 0, 32])
+    // char* scrypt_hex(password, password_len, salt, salt_len, Nfactor, pfactor, rfactor, bytes)

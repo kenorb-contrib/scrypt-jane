@@ -1,0 +1,14 @@
+<html>
+<head><script type="text/javascript" src="test.js"></script></head>
+<body>
+<script>
+function test() {
+	document.getElementById("result").innerHTML = "Failed";
+	if (Module.ccall('scrypt_hex', 'string', ['string', 'number', 'string', 'number', 'number', 'number', 'number', 'number'], ['asdfasdf', 8, 'qwerqwer', 8, 13, 3, 0, 32]) == "20b9ee6887c255bfea5c0b44f8499b026e5f586a18c287e98f8d1849ab7ad608") {
+		document.getElementById("result").innerHTML = "Success!";
+	}
+}
+</script>
+<button id="result" type="button" onclick="test()">Click to test</button>
+</body>
+</html>
