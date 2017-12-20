@@ -185,10 +185,35 @@ scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t
 	scrypt_free(&YX);
 }
 
-char* scrypt_hex(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t salt_len, uint8_t Nfactor, uint8_t rfactor, uint8_t pfactor, size_t bytes) {
+unsigned char gethexvalue(char a) {
+	if (a >= '0' && a <= '9') {
+		return a-'0';
+	} else if (a >= 'a' && a <= 'f') {
+		return a-'a'+10;
+	} else {
+		return a-'A'+10;
+	}
+}
+
+char* scrypt_hex(const char *password_hex, const size_t password_len_hex, const char *salt_hex, const size_t salt_len_hex, uint8_t Nfactor, uint8_t rfactor, uint8_t pfactor, size_t bytes) {
+	// Decode salt and password
+	if (salt_len_hex%2 == 1 || password_len_hex%2 == 1) {
+		return NULL;
+	}
+	const char hex_digits[] = "0123456789abcdef";
+	size_t salt_len = salt_len_hex/2;
+	unsigned char * salt = malloc(salt_len);
+	for (size_t i=0; i<salt_len; i++) {
+		salt[i] = gethexvalue(salt_hex[i*2])*16+gethexvalue(salt_hex[i*2+1]);
+	}
+	size_t password_len = password_len_hex/2;
+	unsigned char * password = malloc(password_len);
+	for (size_t i=0; i<password_len; i++) {
+		password[i] = gethexvalue(password_hex[i*2])*16+gethexvalue(password_hex[i*2+1]);
+	}
+	// Run Scrypt and encode in hex
 	unsigned char * raw_output = malloc(bytes);
 	char * hex_output = malloc(bytes*2+1);
-	const char hex_digits[] = "0123456789abcdef";
 	scrypt(password, password_len, salt, salt_len, Nfactor, rfactor, pfactor, raw_output, bytes);
 	for (size_t i=0; i<bytes; i++) {
 		hex_output[2*i]   = hex_digits[raw_output[i]/16];

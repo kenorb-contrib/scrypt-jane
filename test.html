@@ -4,7 +4,7 @@
 <script>
 function test() {
 	document.getElementById("result").innerHTML = "Failed";
-	if (Module.ccall('scrypt_hex', 'string', ['string', 'number', 'string', 'number', 'number', 'number', 'number', 'number'], ['asdfasdf', 8, 'qwerqwer', 8, 13, 3, 0, 32]) == "20b9ee6887c255bfea5c0b44f8499b026e5f586a18c287e98f8d1849ab7ad608") {
+	if (Module.ccall('scrypt_hex', 'string', ['string', 'number', 'string', 'number', 'number', 'number', 'number', 'number'], ['6173646661736466', 16, '7177657271776572', 16, 13, 3, 0, 32]) == "20b9ee6887c255bfea5c0b44f8499b026e5f586a18c287e98f8d1849ab7ad608") {
 		document.getElementById("result").innerHTML = "Success!";
 	}
 }
