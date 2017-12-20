@@ -164,7 +164,7 @@ Public Domain, or MIT
 
 # Modifications
 
-Some simple modifications to work in emcc (WebAssembly).  
+Some simple modifications to work in emcc.  
 Compile using something like
 
     emcc scrypt-jane.c -O3 -DSCRYPT_SALSA -DSCRYPT_SHA256 -s EXPORTED_FUNCTIONS='["_scrypt_hex"]' -s EXTRA_EXPORTED_RUNTIME_METHODS='["ccall", "cwrap"]' -s ASSERTIONS=1 -s TOTAL_MEMORY=totalram -o example.js
