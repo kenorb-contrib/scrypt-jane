@@ -381,7 +381,9 @@ detect_cpu(void) {
 	/* xsave/xrestore */
 	if (regs.ecx & (1 << 27)) {
 		xgetbv_flags = get_xgetbv(0);
-		if ((regs.ecx & (1 << 28)) && (xgetbv_flags & 0x6)) cpu_flags |= cpu_avx;
+		if ((regs.ecx & (1 << 28)) && ((xgetbv_flags & 0x6) == 0x6)) {
+			cpu_flags |= cpu_avx;
+		}
 	}
 #endif
 	if (regs.ecx & (1 << 20)) cpu_flags |= cpu_sse4_2;
