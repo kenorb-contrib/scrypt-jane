@@ -249,7 +249,7 @@
 #endif /* X86ASM || X86_64ASM */
 
 
-// #if defined(CPU_X86) || defined(CPU_X86_64)
+#if defined(CPU_X86) || defined(CPU_X86_64)
 
 typedef enum cpu_flags_x86_t {
 	cpu_mmx = 1 << 0,
@@ -264,7 +264,10 @@ typedef enum cpu_flags_x86_t {
 	cpu_avx2 = 1 << 9
 } cpu_flags_x86;
 
-#if 0
+#endif  /* CPU_X86 || CPU_X86_64 */
+
+// FIXME(poszu) The assembly below doesn't compile on x86_64 Mac
+#if (defined(CPU_X86) || defined(CPU_X86_64)) && !defined(OS_OSX)
 
 typedef enum cpu_vendors_x86_t {
 	cpu_nobody,
@@ -468,4 +471,4 @@ detect_cpu(void) {
 	return 0;
 }
 
-#endif /* defined(CPU_X86) || defined(CPU_X86_64) */
+#endif /* (defined(CPU_X86) || defined(CPU_X86_64)) && !defined(OS_OSX) */
