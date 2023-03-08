@@ -1,5 +1,4 @@
-// #if defined(CPU_X86) && (defined(COMPILER_MSVC) || defined(COMPILER_GCC))
-#if 0
+#if defined(CPU_X86) && (defined(COMPILER_MSVC) || defined(COMPILER_GCC))
 	#define X86ASM
 
 	/* gcc 2.95 royally screws up stack alignments on variables */
@@ -250,7 +249,8 @@
 #endif /* X86ASM || X86_64ASM */
 
 
-#if defined(CPU_X86) || defined(CPU_X86_64)
+// #if defined(CPU_X86) || defined(CPU_X86_64)
+#if 0
 
 typedef enum cpu_flags_x86_t {
 	cpu_mmx = 1 << 0,
