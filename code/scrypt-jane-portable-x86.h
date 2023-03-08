@@ -1,4 +1,5 @@
-#if defined(CPU_X86) && (defined(COMPILER_MSVC) || defined(COMPILER_GCC))
+// #if defined(CPU_X86) && (defined(COMPILER_MSVC) || defined(COMPILER_GCC))
+#if 0
 	#define X86ASM
 
 	/* gcc 2.95 royally screws up stack alignments on variables */
