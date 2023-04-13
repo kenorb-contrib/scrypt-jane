@@ -68,7 +68,7 @@ scrypt_power_on_self_test(void) {
 		scrypt((uint8_t *)t->pw, strlen(t->pw), (uint8_t *)t->salt, strlen(t->salt), t->Nfactor, t->rfactor, t->pfactor, test_digest, sizeof(test_digest));
 		scrypt_valid &= scrypt_verify(post_vectors[i], test_digest, sizeof(test_digest));
 	}
-	
+
 	if (!scrypt_valid) {
 #if !defined(SCRYPT_TEST)
 		scrypt_fatal_error("scrypt: scrypt power-on-self-test failed");
@@ -79,9 +79,7 @@ scrypt_power_on_self_test(void) {
 	return res;
 }
 
-typedef struct scrypt_aligned_alloc_t {
-	uint8_t *mem, *ptr;
-} scrypt_aligned_alloc;
+
 
 #if defined(SCRYPT_TEST_SPEED)
 static uint8_t *mem_base = (uint8_t *)0;
@@ -123,7 +121,7 @@ scrypt_alloc(uint64_t size) {
 }
 
 static void
-scrypt_free(scrypt_aligned_alloc *aa) {
+scrypt_free(const scrypt_aligned_alloc *aa) {
 	free(aa->mem);
 }
 #endif
@@ -139,7 +137,7 @@ scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t
 	scrypt_ROMixfn scrypt_ROMix = scrypt_getROMix();
 #endif
 
-#if !defined(SCRYPT_TEST)
+#if defined(SCRYPT_TEST)
 	static int power_on_self_test = 0;
 	if (!power_on_self_test) {
 		power_on_self_test = 1;
@@ -179,4 +177,59 @@ scrypt(const uint8_t *password, size_t password_len, const uint8_t *salt, size_t
 
 	scrypt_free(&V);
 	scrypt_free(&YX);
+}
+
+const scrypt_instance* new_instance(unsigned char Nfactor, unsigned char rfactor, unsigned char pfactor) {
+	if (Nfactor > scrypt_maxNfactor)
+		scrypt_fatal_error("scrypt: N out of range");
+	if (rfactor > scrypt_maxrfactor)
+		scrypt_fatal_error("scrypt: r out of range");
+	if (pfactor > scrypt_maxpfactor)
+		scrypt_fatal_error("scrypt: p out of range");
+
+	scrypt_instance* instance = (scrypt_instance *)malloc((size_t)sizeof(scrypt_instance));
+
+	instance->N = (1 << (Nfactor + 1));
+	instance->r = (1 << rfactor);
+	instance->p = (1 << pfactor);
+
+	uint32_t chunk_bytes = SCRYPT_BLOCK_BYTES * instance->r * 2;
+	instance->V = scrypt_alloc((uint64_t)instance->N * chunk_bytes);
+	instance->YX = scrypt_alloc((instance->p + 1) * chunk_bytes);
+	return instance;
+}
+
+void free_instance(const scrypt_instance* instance) {
+	scrypt_free(&instance->V);
+	scrypt_free(&instance->YX);
+	free((void*)instance);
+}
+
+
+void scrypt_preallocated(const scrypt_instance* const instance, const unsigned char *password, size_t password_len, const unsigned char *salt, size_t salt_len, unsigned char *out, size_t bytes) {
+#if !defined(SCRYPT_CHOOSE_COMPILETIME)
+	scrypt_ROMixfn scrypt_ROMix = scrypt_getROMix();
+#endif
+
+#if defined(SCRYPT_TEST)
+	static int power_on_self_test = 0;
+	if (!power_on_self_test) {
+		power_on_self_test = 1;
+		if (!scrypt_power_on_self_test())
+			scrypt_fatal_error("scrypt: power on self test failed");
+	}
+#endif
+	uint32_t chunk_bytes = SCRYPT_BLOCK_BYTES * instance->r * 2;
+	/* 1: X = PBKDF2(password, salt) */
+	uint8_t* Y = instance->YX.ptr;
+	uint8_t* X = Y + chunk_bytes;
+	scrypt_pbkdf2(password, password_len, salt, salt_len, 1, X, chunk_bytes * instance->p);
+
+	/* 2: X = ROMix(X) */
+	for (uint32_t i = 0; i < instance->p; i++) {
+		scrypt_ROMix((scrypt_mix_word_t *)(X + (chunk_bytes * i)), (scrypt_mix_word_t *)Y, (scrypt_mix_word_t *)instance->V.ptr, instance->N, instance->r);
+	}
+
+	/* 3: Out = PBKDF2(password, X) */
+	scrypt_pbkdf2(password, password_len, X, chunk_bytes * instance->p, 1, out, bytes);
 }

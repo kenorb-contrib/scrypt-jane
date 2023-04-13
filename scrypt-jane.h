@@ -18,10 +18,27 @@
 */
 
 #include <stdlib.h>
+#include <stdint.h>
+
+typedef struct scrypt_aligned_alloc_t {
+	uint8_t *mem, *ptr;
+} scrypt_aligned_alloc;
+
+typedef struct scrypt_instance_t {
+	scrypt_aligned_alloc V;
+	scrypt_aligned_alloc YX;
+	uint32_t N, r, p;
+} scrypt_instance;
 
 typedef void (*scrypt_fatal_errorfn)(const char *msg);
 void scrypt_set_fatal_error(scrypt_fatal_errorfn fn);
 
 void scrypt(const unsigned char *password, size_t password_len, const unsigned char *salt, size_t salt_len, unsigned char Nfactor, unsigned char rfactor, unsigned char pfactor, unsigned char *out, size_t bytes);
+
+void scrypt_preallocated(const scrypt_instance* const instance, const unsigned char *password, size_t password_len, const unsigned char *salt, size_t salt_len, unsigned char *out, size_t bytes);
+
+const scrypt_instance* new_instance(unsigned char Nfactor, unsigned char rfactor, unsigned char pfactor);
+
+void free_instance(const scrypt_instance* instance);
 
 #endif /* SCRYPT_JANE_H */
