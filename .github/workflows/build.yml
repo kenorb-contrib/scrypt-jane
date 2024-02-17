@@ -1,0 +1,26 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - master
+      - dev
+  pull_request:
+    branches:
+      - master
+      - dev
+
+jobs:
+  build:
+    defaults:
+      run:
+        shell: bash
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Compile
+      run: |
+        gcc scrypt-jane.c -O3 -DSCRYPT_CHACHA -DSCRYPT_BLAKE512 -c
+        gcc example.c scrypt-jane.o -o example
