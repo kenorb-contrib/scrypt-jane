@@ -264,6 +264,11 @@ typedef enum cpu_flags_x86_t {
 	cpu_avx2 = 1 << 9
 } cpu_flags_x86;
 
+#endif  /* CPU_X86 || CPU_X86_64 */
+
+// FIXME(poszu) The assembly below doesn't compile on x86_64 Mac
+#if (defined(CPU_X86) || defined(CPU_X86_64)) && !defined(OS_OSX)
+
 typedef enum cpu_vendors_x86_t {
 	cpu_nobody,
 	cpu_intel,
@@ -461,6 +466,6 @@ get_top_cpuflag_desc(size_t flag) {
 	#endif
 #endif
 
-#else  /* defined(CPU_X86) || defined(CPU_X86_64) */
+#else  /* defined(CPU_X86) || defined(CPU_X86_64) && !defined(OS_OSX) */
 static size_t detect_cpu(void) { return 0; }
-#endif /* defined(CPU_X86) || defined(CPU_X86_64) */
+#endif /* defined(CPU_X86) || defined(CPU_X86_64) && !defined(OS_OSX) */
